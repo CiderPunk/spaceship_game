@@ -67,11 +67,11 @@ fn spawn_spaceship(mut commands: Commands,scene_assets: Res<SceneAssets>){
 }
 
 fn spaceship_movement_controls(
-  mut query: Query<(&mut Transform, &mut Velocity), With<Spaceship>>,
+  mut query: Query<(&mut Transform, &mut Acceleration), With<Spaceship>>,
   keyboard_input: Res<ButtonInput<KeyCode>>,
   time: Res<Time>,  
 ){
-  let Ok((mut transform, mut velocity)) = query.get_single_mut() else{ 
+  let Ok((mut transform, mut acceleration)) = query.get_single_mut() else{ 
     return; 
   };
   let mut rotation = 0.0;
@@ -103,7 +103,7 @@ fn spaceship_movement_controls(
   //add the roll - this does nothing in the game
   transform.rotate_local_z(roll);
 
-  velocity.value = -transform.forward() * movement
+  acceleration.value = -transform.forward() * movement
 
 }
 
@@ -126,6 +126,7 @@ fn spaceship_weapon_controls(
         transform: Transform::from_translation(
           transform.translation + -transform.forward() * MISSILE_FORWARD_SPAWN_SCALAR
         ),
+        
         ..default()
       }
     }, 
