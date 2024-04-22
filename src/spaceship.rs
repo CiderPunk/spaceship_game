@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use crate::{asset_loader::SceneAssets, collision_detection::{Collider, CollisionDamage}, health::Health, movement::{Acceleration, MovingObjectBundle, Velocity}, schedule::InGameSet, state::GameState};
 
@@ -8,6 +10,8 @@ const SPACESHIP_ROLL_SPEED: f32 = 2.5;
 const SPACESHIP_RADIUS:f32 = 5.0;
 const SPACESHIP_HEALTH: f32 = 100.0;
 const SPACESHIP_COLLISION_DAMAGE: f32 = 100.0;
+
+const SHOOT_TIME_SECONDS:f32 = 0.3;
 
 
 const MISSILE_SPEED: f32 = 50.0;
@@ -28,12 +32,19 @@ pub struct SpaceshipShield;
 #[derive(Component, Debug)]
 pub struct SpaceshipMissile;
 
+#[derive(Resource, Debug)]
+pub struct ShootTimer{
+  timer: Timer,
+}
+
 
 pub struct SpaceshipPlugin;
 
 impl Plugin for SpaceshipPlugin{
   fn build(&self, app: &mut App){
-    app.add_systems(PostStartup, spawn_spaceship)
+    app
+      .insert_resource(ShootTimer{ timer:Timer::from_seconds(SHOOT_TIME_SECONDS, TimerMode::Repeating),})
+      .add_systems(PostStartup, spawn_spaceship)
       .add_systems(OnEnter(GameState::GameOver), spawn_spaceship)
       .add_systems(Update, (
           spaceship_movement_controls, 
@@ -110,30 +121,44 @@ fn spaceship_movement_controls(
 fn spaceship_weapon_controls(
   mut commands:Commands, 
   query:Query<&Transform, With<Spaceship>>,
+  mut shoot_time: ResMut<ShootTimer>,
   keyboard_input: Res<ButtonInput<KeyCode>>,
   scene_assets: Res<SceneAssets>,
+  time:Res<Time>,
 ){
   let Ok(transform) = query.get_single() else {
     return;
   };
-  if keyboard_input.pressed(KeyCode::Space){
-    commands.spawn(( MovingObjectBundle{
-      velocity: Velocity::new(-transform.forward() * MISSILE_SPEED),
-      acceleration: Acceleration::new(Vec3::ZERO),
-      collider:Collider::new(MISSILE_RADIUS),
-      model: SceneBundle{ 
-        scene: scene_assets.missile.clone(),
-        transform: Transform::from_translation(
+  shoot_time.timer.tick(time.delta());
+  if shoot_time.timer.just_finished() || shoot_time.timer.paused(){
+      if keyboard_input.pressed(KeyCode::Space){
+        shoot_time.timer.unpause();
+        let mut missile_transform = Transform::from_translation(
           transform.translation + -transform.forward() * MISSILE_FORWARD_SPAWN_SCALAR
-        ),
-        
-        ..default()
-      }
-    }, 
-    SpaceshipMissile,
-    Health::new (MISSILE_HEALTH),
-    CollisionDamage::new(MISSILE_COLLISION_DAMAGE),
-  ));
+        );
+
+        missile_transform.rotation = Quat::from(transform.rotation)
+          .mul_quat(Quat::from_axis_angle(Vec3::Y, -PI / 2.));
+
+        commands.spawn(( MovingObjectBundle{
+          velocity: Velocity::new(-transform.forward() * MISSILE_SPEED),
+          acceleration: Acceleration::new(Vec3::ZERO),
+          collider:Collider::new(MISSILE_RADIUS),
+          model: SceneBundle{ 
+            scene: scene_assets.missile.clone(),
+            transform: missile_transform,
+            ..default()
+          }
+        }, 
+        SpaceshipMissile,
+        Health::new (MISSILE_HEALTH),
+        CollisionDamage::new(MISSILE_COLLISION_DAMAGE),
+      ));
+    }
+    else{
+      shoot_time.timer.pause();
+
+    }
 
   }
 }

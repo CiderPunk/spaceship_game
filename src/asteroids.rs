@@ -1,8 +1,8 @@
-use std::ops::Range;
+use std::{f32::consts::PI, ops::Range};
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{asset_loader::SceneAssets, collision_detection::{Collider, CollisionDamage}, health::Health, movement::{Acceleration, MovingObjectBundle, Velocity}, schedule::InGameSet};
+use crate::{asset_loader::SceneAssets, collision_detection::{Collider, CollisionDamage}, health::Health, movement::{Acceleration, MovingObjectBundle, Velocity}, schedule::InGameSet, spaceship::Spaceship};
 
 
 const VELOCITY_SCALAR: f32 = 5.0;
@@ -42,6 +42,7 @@ impl Plugin for AsteroidPlugin{
 
 fn spawn_asteroid(
   mut commands:Commands, 
+  query:Query<&GlobalTransform, With<Spaceship>>,
   mut spawn_timer: ResMut<SpawnTimer>, 
   time:Res<Time>, 
   scene_assets:Res<SceneAssets>,
@@ -51,21 +52,35 @@ fn spawn_asteroid(
     return;
   }
 
+  let Ok(target_transform) = query.get_single() else{
+    return;
+  };
+
   let mut rng = rand::thread_rng();
 
-  let translation = Vec3::new(
-    rng.gen_range(SPAWN_RANGE_X),
-    0.0,
-    rng.gen_range(SPAWN_RANGE_Z),
-  );
+  let angle = rng.gen_range(0.0 .. 2. * PI);
+  let mut spawn_loc = Vec3::new(0.,0.,60.);
+  let rotation_quat = Quat::from_axis_angle(Vec3::Y, angle);
+  spawn_loc = rotation_quat.mul_vec3(spawn_loc);
 
-
+  let velocity = (target_transform.translation() - spawn_loc ).normalize_or_zero() * VELOCITY_SCALAR;
+ 
   let mut random_unit_vector = 
-    || Vec3::new(rng.gen_range(-1.0 .. 1.0), 0.0, rng.gen_range(-1.0 .. 1.0))
-    .normalize_or_zero();
+  || Vec3::new(rng.gen_range(-1.0 .. 1.0), 0.0, rng.gen_range(-1.0 .. 1.0))
+  .normalize_or_zero();
+ 
+   let acceleration = random_unit_vector() * ACCELERATION_SCALAR;
 
-    let velocity = random_unit_vector() * VELOCITY_SCALAR;
-    let acceleration = random_unit_vector() * ACCELERATION_SCALAR;
+/* 
+
+
+
+   //let velocity = random_unit_vector() * VELOCITY_SCALAR;
+   //let acceleration = random_unit_vector() * ACCELERATION_SCALAR;
+   let velocity = Vec3::ZERO;
+   let acceleration = Vec3::ZERO;
+   
+ */
 
     commands.spawn((MovingObjectBundle{
       velocity: Velocity::new(velocity),
@@ -73,7 +88,7 @@ fn spawn_asteroid(
       collider:Collider::new(RADIUS),
       model: SceneBundle{
         scene:scene_assets.asteroid.clone(),
-        transform:Transform::from_translation(translation),
+        transform:Transform::from_translation(spawn_loc),
         ..default()
       },
 
