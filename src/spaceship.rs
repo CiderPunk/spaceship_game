@@ -1,24 +1,25 @@
+
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
-use crate::{asset_loader::SceneAssets, collision_detection::{Collider, CollisionDamage}, health::Health, movement::{Acceleration, MovingObjectBundle, Velocity}, schedule::InGameSet, state::GameState};
+use crate::{asset_loader::SceneAssets, collision_detection::{Collider, CollisionDamage, CollisionGroup}, health::Health, movement::{Acceleration, MovingObjectBundle, Velocity}, schedule::InGameSet, state::GameState};
 
 const STARTING_TRANSLATION: Vec3 = Vec3::new(0.0,0.0,-20.0);
 const SPACESHIP_SPEED: f32 = 25.0;
 const SPACESHIP_ROTATION_SPEED: f32 = 2.5;
 const SPACESHIP_ROLL_SPEED: f32 = 2.5;
 const SPACESHIP_RADIUS:f32 = 5.0;
-const SPACESHIP_HEALTH: f32 = 100.0;
+const SPACESHIP_HEALTH: f32 = 1000.0;
 const SPACESHIP_COLLISION_DAMAGE: f32 = 100.0;
 
 const SHOOT_TIME_SECONDS:f32 = 0.3;
 
 
 const MISSILE_SPEED: f32 = 50.0;
-const MISSILE_FORWARD_SPAWN_SCALAR:f32 = 7.5;
+const MISSILE_FORWARD_SPAWN_SCALAR:f32 = 4.0;
 const MISSILE_RADIUS:f32 = 1.0;
 const MISSILE_HEALTH: f32 = 1.0;
-const MISSILE_COLLISION_DAMAGE: f32 = 5.0;
+const MISSILE_COLLISION_DAMAGE: f32 = 500.0;
 
 
 
@@ -64,7 +65,7 @@ fn spawn_spaceship(mut commands: Commands,scene_assets: Res<SceneAssets>){
     MovingObjectBundle {
       velocity: Velocity::new(Vec3::ZERO),
       acceleration:Acceleration::new(Vec3::ZERO),
-      collider:Collider::new(SPACESHIP_RADIUS),
+      collider:Collider::new(SPACESHIP_RADIUS,  CollisionGroup::Player, CollisionGroup::Asteroid),
       model: SceneBundle{
         scene:scene_assets.spaceship.clone(),
         transform: Transform::from_translation(STARTING_TRANSLATION),
@@ -78,11 +79,11 @@ fn spawn_spaceship(mut commands: Commands,scene_assets: Res<SceneAssets>){
 }
 
 fn spaceship_movement_controls(
-  mut query: Query<(&mut Transform, &mut Acceleration), With<Spaceship>>,
+  mut query: Query<(&mut Transform, &mut Acceleration, &Velocity), With<Spaceship>>,
   keyboard_input: Res<ButtonInput<KeyCode>>,
   time: Res<Time>,  
 ){
-  let Ok((mut transform, mut acceleration)) = query.get_single_mut() else{ 
+  let Ok((mut transform, mut acceleration, velocity)) = query.get_single_mut() else{ 
     return; 
   };
   let mut rotation = 0.0;
@@ -114,7 +115,7 @@ fn spaceship_movement_controls(
   //add the roll - this does nothing in the game
   transform.rotate_local_z(roll);
 
-  acceleration.value = -transform.forward() * movement
+  acceleration.value = -transform.forward() * movement - (velocity.value * 0.8);
 
 }
 
@@ -143,7 +144,7 @@ fn spaceship_weapon_controls(
         commands.spawn(( MovingObjectBundle{
           velocity: Velocity::new(-transform.forward() * MISSILE_SPEED),
           acceleration: Acceleration::new(Vec3::ZERO),
-          collider:Collider::new(MISSILE_RADIUS),
+          collider:Collider::new(MISSILE_RADIUS, CollisionGroup::PlayerMissile, CollisionGroup::Asteroid),
           model: SceneBundle{ 
             scene: scene_assets.missile.clone(),
             transform: missile_transform,

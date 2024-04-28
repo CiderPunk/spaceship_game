@@ -1,15 +1,15 @@
-use std::{f32::consts::PI, ops::Range};
+use std::f32::consts::PI;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{asset_loader::SceneAssets, collision_detection::{Collider, CollisionDamage}, health::Health, movement::{Acceleration, MovingObjectBundle, Velocity}, schedule::InGameSet, spaceship::Spaceship};
+use crate::{asset_loader::SceneAssets, collision_detection::{Collider, CollisionDamage, CollisionGroup}, health::Health, movement::{Acceleration, MovingObjectBundle, Velocity}, schedule::InGameSet, spaceship::Spaceship};
 
 
 const VELOCITY_SCALAR: f32 = 5.0;
 const ACCELERATION_SCALAR: f32 = 1.0;
 
-const SPAWN_RANGE_X: Range<f32> = -25.0 .. 25.0;
-const SPAWN_RANGE_Z: Range<f32> = 0.0 .. 25.0;
+//const SPAWN_RANGE_X: Range<f32> = -25.0 .. 25.0;
+//const SPAWN_RANGE_Z: Range<f32> = 0.0 .. 25.0;
 const SPAWN_TIME_SECONDS: f32 = 1.0;
 const ROTATION_SPEED: f32 = 2.5;
 const RADIUS: f32 = 2.5;
@@ -64,13 +64,17 @@ fn spawn_asteroid(
   spawn_loc = rotation_quat.mul_vec3(spawn_loc);
 
   let velocity = (target_transform.translation() - spawn_loc ).normalize_or_zero() * VELOCITY_SCALAR;
- 
+
+
+  /*
   let mut random_unit_vector = 
   || Vec3::new(rng.gen_range(-1.0 .. 1.0), 0.0, rng.gen_range(-1.0 .. 1.0))
   .normalize_or_zero();
  
    let acceleration = random_unit_vector() * ACCELERATION_SCALAR;
+ */
 
+ let acceleration = Vec3::ZERO;
 /* 
 
 
@@ -82,16 +86,16 @@ fn spawn_asteroid(
    
  */
 
-    commands.spawn((MovingObjectBundle{
+  commands.spawn((
+    MovingObjectBundle{
       velocity: Velocity::new(velocity),
       acceleration: Acceleration::new(acceleration),
-      collider:Collider::new(RADIUS),
+      collider:Collider::new(RADIUS, CollisionGroup::Asteroid, CollisionGroup::Player | CollisionGroup::PlayerMissile),
       model: SceneBundle{
         scene:scene_assets.asteroid.clone(),
         transform:Transform::from_translation(spawn_loc),
         ..default()
       },
-
     }, 
     Asteroid,
     Health::new (HEALTH),

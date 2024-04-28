@@ -1087,6 +1087,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitmask-enum"
+version = "2.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9990737a6d5740ff51cdbbc0f0503015cb30c390f6623968281eb214a520cfc0"
+dependencies = [
+ "quote",
+ "syn 2.0.60",
+]
+
+[[package]]
 name = "blake3"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3053,6 +3063,7 @@ name = "spaceship_game"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bitmask-enum",
  "rand",
 ]
 

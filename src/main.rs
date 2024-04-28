@@ -14,8 +14,9 @@ mod health;
 use bevy::prelude::*;
 use asset_loader::AssetLoaderPlugin;
 use camera::CameraPlugin;
+
 use collision_detection::CollisionDetectionPlugin;
-//use debug::DebugPlugin;
+use debug::DebugPlugin;
 use despawn::DespawnPlugin;
 use movement::MovementPlugin;
 use schedule::SchedulePlugin;
@@ -43,6 +44,6 @@ fn main() {
     .add_plugins(CollisionDetectionPlugin)
     .add_plugins(DespawnPlugin)
     .add_plugins(StatePlugin)
-    //.add_plugins(DebugPlugin)
+   // .add_plugins(DebugPlugin)
     .run();
 }
